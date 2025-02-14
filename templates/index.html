@@ -1,0 +1,109 @@
+{% extends "base.html" %}
+
+{% block title %}Главная{% endblock %}
+
+{% block content %}
+<h2>Загрузите файл для анализа тональности</h2>
+<form method="POST" enctype="multipart/form-data">
+  <div class="mb-3">
+    <label for="model" class="form-label">Выберите модель</label>
+    <select class="form-select" id="model" name="model" required>
+      <option value="" disabled selected>Выберите модель</option>
+      {% for model_name in models.keys() %}
+        <option value="{{ model_name }}">{{ model_name }}</option>
+      {% endfor %}
+    </select>
+  </div>
+  <div class="mb-3">
+    <label for="file" class="form-label">Выберите файл (.csv или .xlsx)</label>
+    <input class="form-control" type="file" id="file" name="file" accept=".csv,.xlsx" required>
+  </div>
+  <div class="mb-3">
+    <label for="comment_column" class="form-label">Выберите столбец с комментариями</label>
+    <select class="form-select" id="comment_column" name="comment_column" required disabled>
+      <option value="" disabled selected>Сначала выберите файл</option>
+    </select>
+  </div>
+  <button type="submit" class="btn btn-primary">Анализировать</button>
+</form>
+
+<!-- Оверлей с анимацией загрузки -->
+<div id="loadingOverlay" style="display:none; position: fixed; top: 0; left: 0; width: 100%; height: 100%; background-color: rgba(255,255,255,0.8); z-index: 9999;">
+    <div class="d-flex flex-column justify-content-center align-items-center h-100">
+         <div class="spinner-border text-primary" role="status">
+              <span class="visually-hidden">Загрузка...</span>
+         </div>
+         <p class="mt-3">Обработка данных, пожалуйста, подождите...</p>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Подключаем библиотеку SheetJS для чтения xlsx файлов -->
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script>
+// Обработчик выбора файла для заполнения выпадающего списка столбцов
+document.getElementById('file').addEventListener('change', function(event) {
+    const fileInput = event.target;
+    const file = fileInput.files[0];
+    const commentColumnSelect = document.getElementById('comment_column');
+
+    // Очистка предыдущих опций
+    commentColumnSelect.innerHTML = '<option value="" disabled selected>Загрузка столбцов...</option>';
+    commentColumnSelect.disabled = true;
+
+    if (!file) return;
+
+    const fileName = file.name.toLowerCase();
+    const reader = new FileReader();
+
+    if (fileName.endsWith('.csv')) {
+        // Чтение CSV файла как текста
+        reader.onload = function(e) {
+            const text = e.target.result;
+            // Разбиваем текст на строки (предполагаем разделитель - запятая)
+            const lines = text.split(/\r\n|\n/);
+            if (lines.length > 0) {
+                const headerLine = lines[0];
+                const headers = headerLine.split(',');
+                populateSelect(headers);
+            }
+        };
+        reader.readAsText(file);
+    } else if (fileName.endsWith('.xlsx')) {
+        // Чтение xlsx файла как ArrayBuffer
+        reader.onload = function(e) {
+            const data = new Uint8Array(e.target.result);
+            const workbook = XLSX.read(data, {type: 'array'});
+            const firstSheetName = workbook.SheetNames[0];
+            const worksheet = workbook.Sheets[firstSheetName];
+            const jsonData = XLSX.utils.sheet_to_json(worksheet, {header: 1});
+            if (jsonData.length > 0) {
+                const headers = jsonData[0];
+                populateSelect(headers);
+            }
+        };
+        reader.readAsArrayBuffer(file);
+    } else {
+        // Не поддерживаемый формат
+        commentColumnSelect.innerHTML = '<option value="" disabled selected>Неподдерживаемый формат файла</option>';
+    }
+
+    function populateSelect(headers) {
+        commentColumnSelect.innerHTML = '';
+        headers.forEach(function(header) {
+            const option = document.createElement('option');
+            option.value = header;
+            option.textContent = header;
+            commentColumnSelect.appendChild(option);
+        });
+        commentColumnSelect.disabled = false;
+    }
+});
+
+// При отправке формы показываем оверлей с анимацией загрузки
+document.querySelector("form").addEventListener("submit", function(){
+  document.getElementById("loadingOverlay").style.display = "block";
+});
+</script>
+{% endblock %}

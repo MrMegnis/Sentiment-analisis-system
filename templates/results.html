@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Результаты анализа{% endblock %}
+
+{% block content %}
+<h2>Результаты анализа</h2>
+<div class="mb-3">
+    <a href="{{ url_for('download_file', filename=download_filename) }}" class="btn btn-success">Скачать результаты</a>
+</div>
+
+<div class="row">
+  <div class="col-md-6">
+    <h4>Распределение тональности</h4>
+    <canvas id="sentimentChart" width="400" height="400"></canvas>
+  </div>
+  <div class="col-md-6">
+    <h4>Предсказания</h4>
+    <div style="max-height: 400px; overflow-y: scroll;">
+      {{ table_html|safe }}
+    </div>
+  </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<!-- Подключаем Chart.js через CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+  const ctx = document.getElementById('sentimentChart').getContext('2d');
+  const data = {
+    labels: [{% for label in distribution.keys() %}'{{ label }}',{% endfor %}],
+    datasets: [{
+      label: 'Процентное соотношение',
+      data: [{% for value in distribution.values() %}{{ value }},{% endfor %}],
+      backgroundColor: [
+        'rgba(75, 192, 192, 0.2)',
+        'rgba(192, 75, 192, 0.2)',
+        'rgba(192, 192, 75, 0.2)'
+      ],
+      borderColor: [
+        'rgba(75, 192, 192, 1)',
+        'rgba(192, 75, 192, 1)',
+        'rgba(192, 192, 75, 1)'
+      ],
+      borderWidth: 1
+    }]
+  };
+  const config = {
+    type: 'pie',
+    data: data,
+    options: {
+      responsive: true,
+    }
+  };
+  new Chart(ctx, config);
+</script>
+{% endblock %}
