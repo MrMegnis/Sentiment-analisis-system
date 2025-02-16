@@ -96,7 +96,8 @@ def index():
             "results.html",
             table_html=table_html,
             distribution=distribution,
-            download_filename=result_filename
+            download_filename=result_filename,
+            selected_column=comment_column
         )
     return render_template("index.html", models=MODELS)
 

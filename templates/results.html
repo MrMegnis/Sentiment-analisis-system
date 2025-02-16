@@ -4,6 +4,12 @@
 
 {% block content %}
 <h2>Результаты анализа</h2>
+
+<!-- Блок с информацией о выбранном столбце -->
+<div class="alert alert-info" role="alert">
+    Обработанный столбец: <strong>{{ selected_column }}</strong>
+</div>
+
 <div class="mb-3">
     <a href="{{ url_for('download_file', filename=download_filename) }}" class="btn btn-success">Скачать результаты</a>
 </div>
