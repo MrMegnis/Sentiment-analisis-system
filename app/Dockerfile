@@ -1,6 +1,6 @@
 FROM python:3.11-slim
 
-WORKDIR .
+WORKDIR ./sent-analisis-app
 
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
@@ -11,4 +11,4 @@ COPY datasets/ ./datasets
 
 EXPOSE 5000
 
-CMD ["sh", "-c", "ls -la && python app.py"]
+CMD ["sh", "-c", "ls -la && python app/app.py"]
