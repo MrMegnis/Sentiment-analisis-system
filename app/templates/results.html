@@ -5,7 +5,6 @@
 {% block content %}
 <h2>Результаты анализа</h2>
 
-<!-- Блок с информацией о выбранном столбце -->
 <div class="alert alert-info" role="alert">
     Обработанный столбец: <strong>{{ selected_column }}</strong>
 </div>
@@ -29,7 +28,6 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Подключаем Chart.js через CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const ctx = document.getElementById('sentimentChart').getContext('2d');

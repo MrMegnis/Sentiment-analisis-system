@@ -4,6 +4,7 @@ from flask import Flask, render_template, request, redirect, url_for, send_from_
 import pandas as pd
 from transformers import pipeline
 from config import MODELS, UPLOAD_FOLDER, ALLOWED_EXTENSIONS, LABEL_MAPPING
+from datasets import remove_html_tags
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -43,6 +44,7 @@ def index():
         selected_model = request.form.get("model")
         file = request.files.get("file")
         comment_column = request.form.get("comment_column")
+        replace_comment = request.form.get("replace_comment")
 
         if not selected_model or selected_model not in MODELS:
             flash("Выберите корректную модель.")
@@ -78,8 +80,15 @@ def index():
         model_id = MODELS[selected_model]
         sentiment_pipeline = pipeline("sentiment-analysis", model=model_id)
 
-        texts = df[comment_column].astype(str).tolist()
-        predictions = sentiment_pipeline(texts, truncation=True)
+        original_texts = df[comment_column].astype(str).tolist()
+        processed_texts = [remove_html_tags(text) for text in original_texts]
+
+        if replace_comment:
+            df[comment_column] = processed_texts
+
+        texts_for_prediction = processed_texts
+
+        predictions = sentiment_pipeline(texts_for_prediction, truncation=True)
 
         pred_labels = [LABEL_MAPPING.get(pred["label"], pred["label"]) for pred in predictions]
         df["prediction"] = pred_labels
