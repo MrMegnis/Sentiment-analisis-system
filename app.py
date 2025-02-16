@@ -3,7 +3,7 @@ import uuid
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash
 import pandas as pd
 from transformers import pipeline
-from config import MODELS, UPLOAD_FOLDER, ALLOWED_EXTENSIONS
+from config import MODELS, UPLOAD_FOLDER, ALLOWED_EXTENSIONS, LABEL_MAPPING
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -15,6 +15,26 @@ if not os.path.exists(UPLOAD_FOLDER):
 
 def allowed_file(filename):
     return '.' in filename and filename.rsplit('.', 1)[1].lower() in ALLOWED_EXTENSIONS
+
+
+def precache_models_with_pipeline():
+    """
+    Для каждой модели из конфигурации создаём объект pipeline,
+    что приводит к загрузке всех файлов модели в указанный каталог кэша.
+    После этого объект удаляется, чтобы не занимать оперативную память.
+    """
+    for model_name, model_id in MODELS.items():
+        try:
+            print(f"Pre-caching model '{model_name}' using pipeline...")
+            pipe = pipeline("sentiment-analysis", model=model_id, cache_dir=None)
+            pipe("This is a dummy sentence for caching purposes.")
+            del pipe
+            print(f"Model '{model_name}' cached on disk.")
+        except Exception as e:
+            print(f"Error caching model '{model_name}': {e}")
+
+
+precache_models_with_pipeline()
 
 
 @app.route("/", methods=["GET", "POST"])
@@ -61,7 +81,7 @@ def index():
         texts = df[comment_column].astype(str).tolist()
         predictions = sentiment_pipeline(texts, truncation=True)
 
-        pred_labels = [pred["label"] for pred in predictions]
+        pred_labels = [LABEL_MAPPING.get(pred["label"], pred["label"]) for pred in predictions]
         df["prediction"] = pred_labels
 
         result_filename = unique_id + "_predictions.csv"
