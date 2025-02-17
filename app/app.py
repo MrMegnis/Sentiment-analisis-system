@@ -33,7 +33,7 @@ def precache_models_with_pipeline():
     for model_name, model_id in MODELS.items():
         try:
             logging.info(f"Pre-caching model '{model_name}' using pipeline...")
-            pipe = pipeline("sentiment-analysis", model=model_id, cache_dir=None)
+            pipe = pipeline("sentiment-analysis", model=model_id)
             pipe("This is a dummy sentence for caching purposes.")
             del pipe
             logging.info(f"Model '{model_name}' cached on disk.")
@@ -125,4 +125,4 @@ def download_file(filename):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True, port=5000, threaded=True)
