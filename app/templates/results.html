@@ -4,6 +4,11 @@
 
 {% block content %}
 <h2>Результаты анализа</h2>
+
+<div class="alert alert-info" role="alert">
+    Обработанный столбец: <strong>{{ selected_column }}</strong>
+</div>
+
 <div class="mb-3">
     <a href="{{ url_for('download_file', filename=download_filename) }}" class="btn btn-success">Скачать результаты</a>
 </div>
@@ -23,7 +28,6 @@
 {% endblock %}
 
 {% block scripts %}
-<!-- Подключаем Chart.js через CDN -->
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 <script>
   const ctx = document.getElementById('sentimentChart').getContext('2d');

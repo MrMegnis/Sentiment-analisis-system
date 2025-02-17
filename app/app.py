@@ -1,9 +1,16 @@
 import os
 import uuid
+import logging
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash
 import pandas as pd
 from transformers import pipeline
 from config import MODELS, UPLOAD_FOLDER, ALLOWED_EXTENSIONS, LABEL_MAPPING
+from datasets import remove_html_tags
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -25,13 +32,13 @@ def precache_models_with_pipeline():
     """
     for model_name, model_id in MODELS.items():
         try:
-            print(f"Pre-caching model '{model_name}' using pipeline...")
-            pipe = pipeline("sentiment-analysis", model=model_id, cache_dir=None)
+            logging.info(f"Pre-caching model '{model_name}' using pipeline...")
+            pipe = pipeline("sentiment-analysis", model=model_id)
             pipe("This is a dummy sentence for caching purposes.")
             del pipe
-            print(f"Model '{model_name}' cached on disk.")
+            logging.info(f"Model '{model_name}' cached on disk.")
         except Exception as e:
-            print(f"Error caching model '{model_name}': {e}")
+            logging.error(f"Error caching model '{model_name}': {e}")
 
 
 precache_models_with_pipeline()
@@ -43,6 +50,7 @@ def index():
         selected_model = request.form.get("model")
         file = request.files.get("file")
         comment_column = request.form.get("comment_column")
+        replace_comment = request.form.get("replace_comment")
 
         if not selected_model or selected_model not in MODELS:
             flash("Выберите корректную модель.")
@@ -61,6 +69,7 @@ def index():
         unique_id = str(uuid.uuid4())
         file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_id + "." + file_ext)
         file.save(file_path)
+        logging.info("File saved to %s", file_path)
 
         try:
             if file_ext == "csv":
@@ -69,6 +78,7 @@ def index():
                 df = pd.read_excel(file_path)
         except Exception as e:
             flash("Ошибка при чтении файла: " + str(e))
+            logging.error("Error reading file %s: %s", file_path, e)
             return redirect(request.url)
 
         if comment_column not in df.columns:
@@ -78,8 +88,15 @@ def index():
         model_id = MODELS[selected_model]
         sentiment_pipeline = pipeline("sentiment-analysis", model=model_id)
 
-        texts = df[comment_column].astype(str).tolist()
-        predictions = sentiment_pipeline(texts, truncation=True)
+        original_texts = df[comment_column].astype(str).tolist()
+        processed_texts = [remove_html_tags(text) for text in original_texts]
+
+        if replace_comment:
+            df[comment_column] = processed_texts
+
+        texts_for_prediction = processed_texts
+
+        predictions = sentiment_pipeline(texts_for_prediction, truncation=True)
 
         pred_labels = [LABEL_MAPPING.get(pred["label"], pred["label"]) for pred in predictions]
         df["prediction"] = pred_labels
@@ -96,7 +113,8 @@ def index():
             "results.html",
             table_html=table_html,
             distribution=distribution,
-            download_filename=result_filename
+            download_filename=result_filename,
+            selected_column=comment_column
         )
     return render_template("index.html", models=MODELS)
 
@@ -107,4 +125,4 @@ def download_file(filename):
 
 
 if __name__ == "__main__":
-    app.run(debug=True)
+    app.run(host="0.0.0.0", debug=True, port=5000, threaded=True)
