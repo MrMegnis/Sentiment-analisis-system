@@ -7,7 +7,7 @@ RUN pip install -r requirements.txt
 
 COPY app/ ./app
 
-COPY datasets/ ./datasets
+COPY datasets/ ./app/datasets
 
 EXPOSE 5000
 

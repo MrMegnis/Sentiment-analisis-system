@@ -1,10 +1,16 @@
 import os
 import uuid
+import logging
 from flask import Flask, render_template, request, redirect, url_for, send_from_directory, flash
 import pandas as pd
 from transformers import pipeline
 from config import MODELS, UPLOAD_FOLDER, ALLOWED_EXTENSIONS, LABEL_MAPPING
 from datasets import remove_html_tags
+
+logging.basicConfig(
+    level=logging.INFO,
+    format="%(asctime)s [%(levelname)s] %(message)s",
+)
 
 app = Flask(__name__)
 app.secret_key = "supersecretkey"
@@ -26,13 +32,13 @@ def precache_models_with_pipeline():
     """
     for model_name, model_id in MODELS.items():
         try:
-            print(f"Pre-caching model '{model_name}' using pipeline...")
+            logging.info(f"Pre-caching model '{model_name}' using pipeline...")
             pipe = pipeline("sentiment-analysis", model=model_id, cache_dir=None)
             pipe("This is a dummy sentence for caching purposes.")
             del pipe
-            print(f"Model '{model_name}' cached on disk.")
+            logging.info(f"Model '{model_name}' cached on disk.")
         except Exception as e:
-            print(f"Error caching model '{model_name}': {e}")
+            logging.error(f"Error caching model '{model_name}': {e}")
 
 
 precache_models_with_pipeline()
@@ -63,6 +69,7 @@ def index():
         unique_id = str(uuid.uuid4())
         file_path = os.path.join(app.config["UPLOAD_FOLDER"], unique_id + "." + file_ext)
         file.save(file_path)
+        logging.info("File saved to %s", file_path)
 
         try:
             if file_ext == "csv":
@@ -71,6 +78,7 @@ def index():
                 df = pd.read_excel(file_path)
         except Exception as e:
             flash("Ошибка при чтении файла: " + str(e))
+            logging.error("Error reading file %s: %s", file_path, e)
             return redirect(request.url)
 
         if comment_column not in df.columns:
