@@ -9,6 +9,10 @@
     Обработанный столбец: <strong>{{ selected_column }}</strong>
 </div>
 
+<div class="alert alert-warning" role="alert">
+    Для того, чтобы увидеть точные проценты, наведите курсор на диаграмму.
+</div>
+
 <div class="mb-3">
     <a href="{{ url_for('download_file', filename=download_filename) }}" class="btn btn-success">Скачать результаты</a>
 </div>
@@ -49,13 +53,24 @@
       borderWidth: 1
     }]
   };
+
   const config = {
     type: 'pie',
     data: data,
     options: {
       responsive: true,
+      plugins: {
+        tooltip: {
+          callbacks: {
+            label: function(tooltipItem) {
+              return tooltipItem.label + ': ' + tooltipItem.raw.toFixed(2) + '%'; // Точное значение процентов
+            }
+          }
+        }
+      }
     }
   };
+
   new Chart(ctx, config);
 </script>
 {% endblock %}
